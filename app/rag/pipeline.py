@@ -7,13 +7,16 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.retrieval.embeddings import create_embeddings
 
+
 load_dotenv()
+
 
 CHROMA_PATH = "chroma_db"
 COLLECTION_NAME = "resume"
 
 
 class RAGPipeline:
+
     def __init__(self):
         print("Initializing RAG pipeline...")
 
@@ -58,11 +61,14 @@ class RAGPipeline:
         # -------------------------
         # Retrieval
         # -------------------------
+
         retrieval_start = time.perf_counter()
 
-        documents = self.vector_store.similarity_search(
+        documents = self.vector_store.max_marginal_relevance_search(
             question,
             k=3,
+            fetch_k=8,
+            lambda_mult=0.5,
         )
 
         retrieval_time = time.perf_counter() - retrieval_start
@@ -70,6 +76,7 @@ class RAGPipeline:
         # -------------------------
         # Build context
         # -------------------------
+
         context_start = time.perf_counter()
 
         context = self.build_context(documents)
@@ -79,6 +86,7 @@ class RAGPipeline:
         # -------------------------
         # LLM generation
         # -------------------------
+
         llm_start = time.perf_counter()
 
         prompt = f"""
@@ -103,11 +111,21 @@ User question:
 
         response = self.llm.invoke(prompt)
 
+        # -------------------------
+        # LLM metadata
+        # -------------------------
+
+        print("\n=== RESPONSE TYPE ===")
+        print(type(response))
+        print("\n=== RESPONSE ATTRIBUTES ===")
+        print(response.__dict__)
+
         llm_time = time.perf_counter() - llm_start
 
         # -------------------------
         # Normalize response
         # -------------------------
+
         content = response.content
 
         if isinstance(content, list):
@@ -117,6 +135,10 @@ User question:
                 if isinstance(item, dict)
                 and item.get("type") == "text"
             )
+
+        # -------------------------
+        # Total timing
+        # -------------------------
 
         total_time = time.perf_counter() - total_start
 
@@ -132,6 +154,7 @@ User question:
 
 
 if __name__ == "__main__":
+
     rag = RAGPipeline()
 
     question = "What experience does Vignesh have with RAG?"
