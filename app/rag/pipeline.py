@@ -55,7 +55,31 @@ class RAGPipeline:
 
         return "\n\n".join(context_parts)
 
+    @staticmethod
+    def is_greeting(question):
+        greetings = {
+            "hi",
+            "hello",
+            "hey",
+            "hi there",
+            "hello there",
+            "hey there",
+        }
+
+        return question.strip().lower() in greetings
+
     def ask(self, question):
+
+        # -------------------------
+        # Simple greeting handling
+        # -------------------------
+
+        if self.is_greeting(question):
+            return (
+                "Hello! Ask me anything about the provided document.",
+                [],
+            )
+
         total_start = time.perf_counter()
 
         # -------------------------
@@ -98,7 +122,8 @@ Rules:
 - If the answer cannot be found in the context, say:
   "I couldn't find that information in the provided document."
 - Keep the answer concise.
-- Mention the relevant source page when useful.
+- Do NOT write source labels such as [Source 1], [Source 2], or [Source 3].
+- Do NOT mention source numbers in the answer.
 
 Context:
 {context}
@@ -108,16 +133,6 @@ User question:
 """
 
         response = self.llm.invoke(prompt)
-
-        # -------------------------
-        # LLM metadata
-        # -------------------------
-
-        print("\n=== RESPONSE TYPE ===")
-        print(type(response))
-
-        print("\n=== RESPONSE ATTRIBUTES ===")
-        print(response.__dict__)
 
         llm_time = time.perf_counter() - llm_start
 
@@ -134,6 +149,9 @@ User question:
                 if isinstance(item, dict)
                 and item.get("type") == "text"
             )
+        
+        if "I couldn't find that information in the provided document." in content:
+            return content, []
 
         # -------------------------
         # Total timing
@@ -153,6 +171,7 @@ User question:
 
 
 if __name__ == "__main__":
+
     rag = RAGPipeline()
 
     question = "What technologies does Vignesh use for Generative AI?"
