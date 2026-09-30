@@ -64,11 +64,9 @@ class RAGPipeline:
 
         retrieval_start = time.perf_counter()
 
-        documents = self.vector_store.max_marginal_relevance_search(
+        documents = self.vector_store.similarity_search(
             question,
             k=3,
-            fetch_k=8,
-            lambda_mult=0.5,
         )
 
         retrieval_time = time.perf_counter() - retrieval_start
@@ -167,7 +165,7 @@ if __name__ == "__main__":
     print("\n=== SOURCES ===")
 
     for index, document in enumerate(documents):
-        print(
-            f"{index + 1}. "
-            f"Page {document.metadata.get('page')}"
-        )
+        print(f"\n--- Chunk {index + 1} ---")
+        print(f"Page: {document.metadata.get('page')}")
+        print(f"Source: {document.metadata.get('source')}")
+        print(f"Content:\n{document.page_content}")
