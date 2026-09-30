@@ -5,8 +5,8 @@ from app.ingestion.loader import load_document
 
 def split_documents(documents):
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
+        chunk_size=300,
+        chunk_overlap=30,
     )
 
     chunks = splitter.split_documents(documents)

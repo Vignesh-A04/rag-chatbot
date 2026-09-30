@@ -115,6 +115,7 @@ User question:
 
         print("\n=== RESPONSE TYPE ===")
         print(type(response))
+
         print("\n=== RESPONSE ATTRIBUTES ===")
         print(response.__dict__)
 
@@ -152,10 +153,9 @@ User question:
 
 
 if __name__ == "__main__":
-
     rag = RAGPipeline()
 
-    question = "What experience does Vignesh have with RAG?"
+    question = "What technologies does Vignesh use for Generative AI?"
 
     answer, documents = rag.ask(question)
 
