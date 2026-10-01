@@ -7,3 +7,4 @@ langchain-google-genai
 chromadb
 pypdf
 python-multipart==0.0.32
+langchain-chroma
