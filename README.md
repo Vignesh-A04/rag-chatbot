@@ -33,6 +33,39 @@ User Question
      LLM
       ↓
    Answer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
    
 RAG Chatbot
 
