@@ -28,7 +28,7 @@ type Document = {
 
 type View = "chat" | "documents";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://rag-chatbot-p2ds.onrender.com";
 
 export default function Home() {
   const [view, setView] = useState<View>("chat");
