@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.ingestion.loader import load_document
@@ -10,12 +12,13 @@ def split_documents(documents):
     )
 
     chunks = splitter.split_documents(documents)
-
     return chunks
 
 
 if __name__ == "__main__":
-    documents = load_document()
+    pdf_path = Path("data/documents/Vignesh_Arumugam_AI_Engineer_CV 4.pdf")
+
+    documents = load_document(pdf_path)
     chunks = split_documents(documents)
 
     print(f"Total pages: {len(documents)}")

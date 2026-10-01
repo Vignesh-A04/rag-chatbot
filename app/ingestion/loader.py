@@ -3,20 +3,22 @@ from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader
 
 
-PDF_PATH = Path(
-    "data/documents/Vignesh_Arumugam_AI_Engineer_CV 4.pdf"
-)
+def load_document(pdf_path: str | Path):
+    pdf_path = Path(pdf_path)
 
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
-def load_document():
-    loader = PyPDFLoader(str(PDF_PATH))
+    loader = PyPDFLoader(str(pdf_path))
     documents = loader.load()
 
     return documents
 
 
 if __name__ == "__main__":
-    documents = load_document()
+    pdf_path = Path("data/documents/Vignesh_Arumugam_AI_Engineer_CV 4.pdf")
+
+    documents = load_document(pdf_path)
 
     print(f"Total pages loaded: {len(documents)}")
 

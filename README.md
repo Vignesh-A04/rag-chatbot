@@ -1,411 +1,88 @@
 # RAG Chatbot
 
-A full-stack Retrieval-Augmented Generation (RAG) chatbot that answers questions from a provided PDF document.
+A full-stack Retrieval-Augmented Generation (RAG) chatbot built with Python, LangChain, Google Gemini, Chroma, FastAPI, and Next.js.
 
-The project demonstrates an end-to-end RAG pipeline using:
+The application allows users to upload multiple PDF documents, retrieve relevant information from them, and generate grounded answers using Gemini.
 
-- Python
-- LangChain
-- Google Gemini
-- Gemini Embeddings
-- Chroma
-- FastAPI
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
+## Features
 
-The application loads a PDF, splits it into smaller chunks, converts those chunks into embeddings, stores them in Chroma, retrieves the most relevant chunks for a user question, and uses Gemini to generate a grounded answer.
+- Multi-PDF document upload
+- PDF text extraction using PyPDFLoader
+- Recursive text chunking
+- Gemini embeddings
+- Chroma vector database
+- Semantic similarity search
+- Gemini-powered RAG responses
+- Source and page attribution
+- Document listing
+- Individual document deletion
+- Clear all documents
+- Greeting handling
+- Out-of-document fallback handling
+- FastAPI REST API
+- Next.js chat interface
+- Document management interface
 
 ---
 
-# 1. Project Overview
+## Architecture
 
-Traditional LLM applications can generate answers using the model's general knowledge, but they do not automatically know the contents of a private document.
-
-This project solves that problem using Retrieval-Augmented Generation.
-
-Instead of asking the LLM to answer directly:
+### Document Ingestion
 
 ```text
-User Question
-      ↓
-     LLM
-      ↓
-   Answer
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-   
-RAG Chatbot
-
-Full-stack Retrieval-Augmented Generation chatbot using Python, LangChain, Google Gemini, Chroma, FastAPI, and Next.js.
-
-1. Project Overview
-
-This project reads a PDF document, processes and chunks its content, creates embeddings, stores the embeddings in Chroma, retrieves relevant chunks for a user's question, and uses Google Gemini to generate a grounded answer. The Next.js frontend provides a web-based chat interface and displays document sources.
-
 PDF
- |
- v
+ ↓
+FastAPI Upload
+ ↓
 PyPDFLoader
- |
- v
+ ↓
+Document Pages
+ ↓
 RecursiveCharacterTextSplitter
- |
- v
+ ↓
+Text Chunks
+ ↓
 Gemini Embeddings
- |
- v
+ ↓
 Chroma Vector Database
- |
- v
+
+
+
+Question Answering
 User Question
- |
- v
-Query Embedding
- |
- v
+ ↓
+Gemini Embedding
+ ↓
 Chroma Similarity Search
- |
- v
+ ↓
 Top 3 Relevant Chunks
- |
- v
+ ↓
+Context Construction
+ ↓
 Gemini LLM
- |
- v
-FastAPI
- |
- v
-Next.js Frontend
-
-2. Technology Stack
-
-Area
-
-Technology
-
-Purpose
-
-Backend
-
-Python
-
-Main backend language
-
-Backend
-
-FastAPI
-
-REST API
-
-Backend
-
-Uvicorn
-
-ASGI server
-
-Backend
-
-Pydantic
-
-Request/response validation
-
-AI
-
-LangChain
-
-AI/LLM integrations and orchestration
-
-AI
-
-Google Gemini
-
-LLM generation
-
-AI
-
-gemini-embedding-001
-
-Text embeddings
-
-Vector DB
-
-Chroma
-
-Vector storage and similarity search
-
-Document
-
-PyPDFLoader
-
-PDF loading
-
-Document
-
-RecursiveCharacterTextSplitter
-
-Document chunking
-
-Frontend
-
-Next.js
-
-Frontend framework
-
-Frontend
-
-React
-
-UI
-
-Frontend
-
-TypeScript
-
-Frontend language
-
-Frontend
-
-Tailwind CSS
-
-Styling
-
-Development
-
-Git / GitHub
-
-Version control and repository
-
-3. Prerequisites
-
-Install the following before running the project:
-
-Python 3.x
-
-Node.js and npm
-
-Git
-
-A Google Gemini API key
-
-4. Clone the Repository
-
-git clone https://github.com/vignesh-a-nt07/rag-chatbot.git
-cd rag-chatbot
-
-5. Backend Setup
-
-Step 1 - Create the Python Virtual Environment
-
-python -m venv venv
-
-Step 2 - Activate the Virtual Environment
-
-.\venv\Scripts\Activate.ps1
-
-The terminal should show (venv) after activation.
-
-Step 3 - Install Backend Dependencies
-
-pip install -r requirements.txt
-
-6. Configure Environment Variables
-
-Create a .env file in the project root:
-
-GOOGLE_API_KEY=your_google_api_key
-GEMINI_MODEL=gemini-3.5-flash-lite
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
-
-Replace your_google_api_key with the actual Gemini API key. Never commit the API key to GitHub.
-
-7. Source Document
-
-The current source document is:
-
-data/documents/Vignesh_Arumugam_AI_Engineer_CV 4.pdf
-
-8. Create the Chroma Vector Database
-
-The vector database must be created before the application can answer questions. Run this once after the initial setup:
-
-python -m app.retrieval.vector_store
-
-This performs PDF loading, chunking, embedding generation, and Chroma storage.
-
-chroma_db/
-
-9. Rebuild Chroma When Needed
-
-If the source document, chunk size, chunk overlap, or embedding model changes, rebuild the local Chroma database:
-
-Remove-Item chroma_db -Recurse -Force
-python -m app.retrieval.vector_store
-
-10. Current Chunking Configuration
-
-chunk_size = 300
-chunk_overlap = 30
-
-This configuration was tested against the current resume document and produced focused retrieval results for the project's test questions.
-
-11. Start the FastAPI Backend
-
-python -m uvicorn app.main:app --reload
-
-Backend URL:
-
-http://127.0.0.1:8000
-
-12. Test Backend Health
-
-Invoke-RestMethod http://127.0.0.1:8000/health
-
-Expected response:
-
-{
-  "status": "ok"
-}
-
-13. FastAPI Swagger UI
-
-Open:
-
-http://127.0.0.1:8000/docs
-
-The Swagger UI exposes:
-
-GET /health
-
-POST /chat
-
-14. Test the Chat API
-
-$body = @{
-    question = "What experience does Vignesh have with RAG?"
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-    -Uri "http://127.0.0.1:8000/chat" `
-    -Method Post `
-    -ContentType "application/json" `
-    -Body $body
-
-The API returns an answer and source metadata.
-
-15. Frontend Setup
-
-Open a second PowerShell terminal and move into the frontend directory:
-
-cd frontend
-npm install
-
-16. Start Next.js
-
-npm run dev
-
-Frontend URL:
-
-http://localhost:3000
-
-17. Run the Complete Application
-
-Two terminals are required.
-
-Terminal 1 - Backend
-
-cd D:\vicky\practice\Repo\rag-chatbot
-.\venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --reload
-
-Terminal 2 - Frontend
-
-cd D:\vicky\practice\Repo\rag-chatbot\frontend
-npm run dev
-
-Then open:
-
-http://localhost:3000
-
-18. Test Questions
-
-What experience does Vignesh have with RAG?
-
-What technologies does Vignesh use for Generative AI?
-
-What backend technologies does Vignesh know?
-
-What cloud and deployment technologies does Vignesh use?
-
-19. Greeting Test
-
-hi
-
-Simple greetings are handled directly without running the complete RAG process.
-
-20. Out-of-Document Test
-
-how are you?
-
-Expected fallback: "I couldn't find that information in the provided document."
-
-21. Frontend to Backend Flow
-
-Next.js
-   |
-   | POST /chat
-   v
-FastAPI
-   |
-   v
-RAGPipeline
-   |
-   +----> Gemini Embeddings
-   |
-   +----> Chroma Search
-   |
-   +----> Gemini LLM
-   |
-   v
+ ↓
 Answer + Sources
-   |
-   v
-Next.js
 
-22. Project Structure
+Technology Stack
+Area	Technology	Purpose
+Backend	Python	Application development
+Backend	FastAPI	REST API
+Backend	Uvicorn	ASGI server
+Backend	Pydantic	Request/response validation
+AI	LangChain	LLM and document processing
+AI	Google Gemini	Answer generation
+Embeddings	Gemini Embedding	Text embeddings
+Vector DB	Chroma	Vector storage and similarity search
+Document Processing	PyPDFLoader	PDF loading
+Document Processing	RecursiveCharacterTextSplitter	Text chunking
+Frontend	Next.js	Web application
+Frontend	React	UI
+Frontend	TypeScript	Frontend language
+Frontend	Tailwind CSS	Styling
+Version Control	Git / GitHub	Source control
 
+
+Project Structure
 rag-chatbot/
 │
 ├── app/
@@ -419,26 +96,17 @@ rag-chatbot/
 │   │
 │   ├── retrieval/
 │   │   ├── __init__.py
-│   │   ├── embeddings.py
-│   │   ├── vector_store.py
-│   │   └── retriever.py
+│   │   └── embeddings.py
 │   │
 │   └── rag/
 │       ├── __init__.py
 │       └── pipeline.py
 │
 ├── data/
-│   └── documents/
-│       └── Vignesh_Arumugam_AI_Engineer_CV 4.pdf
+│   ├── documents/
+│   └── uploads/
 │
 ├── frontend/
-│   ├── app/
-│   │   ├── page.tsx
-│   │   ├── layout.tsx
-│   │   └── globals.css
-│   ├── public/
-│   ├── package.json
-│   └── ...
 │
 ├── chroma_db/
 ├── .env
@@ -446,80 +114,118 @@ rag-chatbot/
 ├── requirements.txt
 └── README.md
 
-23. Module Responsibilities
+Setup
+Prerequisites
+Install:
+- Python 3.x
+- Node.js
+- npm
+- Git
+- Google Gemini API key
+1. Clone the Repository
+git clone https://github.com/vignesh-a-nt07/rag-chatbot.git
+cd rag-chatbot
 
-File
+2. Backend Setup
+Create Virtual Environment
+python -m venv venv
 
-Responsibility
+Activate Virtual Environment
+.\venv\Scripts\Activate.ps1
 
-app/ingestion/loader.py
+You should see:
+(venv)
 
-Loads the PDF using PyPDFLoader.
+Install Dependencies
+Use:
+python -m pip install -r requirements.txt
 
-app/ingestion/chunker.py
+3. Configure Environment Variables
+Create a .env file in the project root:
+GOOGLE_API_KEY=your_google_api_key
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 
-Splits documents into chunks.
+Replace your_google_api_key with your actual Gemini API key.
+Never commit .env to GitHub.
+Running the Application
+4. Start the FastAPI Backend
+From the project root:
+python -m uvicorn app.main:app --reload
 
-app/retrieval/embeddings.py
+Backend:
+http://127.0.0.1:8000
 
-Creates the Gemini embedding integration.
+Swagger API documentation:
+http://127.0.0.1:8000/docs
 
-app/retrieval/vector_store.py
+5. Start the Next.js Frontend
+Open a second PowerShell terminal.
+cd frontend
+npm install
+npm run dev
 
-Creates and populates the Chroma vector database.
+Frontend:
+http://localhost:3000
 
-app/retrieval/retriever.py
+API Endpoints
+Health Check
+GET /health
 
-Provides the retrieval abstraction.
+Example:
+Invoke-RestMethod http://127.0.0.1:8000/health
 
-app/rag/pipeline.py
+Response:
+{
+  "status": "ok"
+}
 
-Coordinates retrieval, context construction, prompting, and Gemini generation.
+Upload Document
+POST /upload
 
-app/main.py
+Accepts PDF files.
+Example response:
+{
+  "document_id": "document-uuid",
+  "filename": "example.pdf",
+  "pages": 2,
+  "chunks": 34
+}
 
-Exposes the RAG pipeline through FastAPI.
+List Documents
+GET /documents
 
-frontend/app/page.tsx
+Returns all currently uploaded documents.
+Delete Document
+DELETE /documents/{document_id}
 
-Provides the chat interface and calls the backend API.
+Deletes one document and its associated chunks.
+Delete All Documents
+DELETE /documents
 
-24. Important Component Responsibilities
+Removes all uploaded documents and their vector data.
+Chat
+POST /chat
 
-Component
+Example request:
+{
+  "question": "What experience does Vignesh have with RAG?"
+}
 
-Role
+Example response:
+{
+  "answer": "The generated answer based on the uploaded documents.",
+  "sources": [
+    {
+      "page": 1,
+      "source": "example.pdf",
+      "document_id": "document-uuid"
+    }
+  ]
+}
 
-Python
-
-Runs the application code.
-
-LangChain
-
-Provides integrations and orchestration.
-
-Gemini Embeddings
-
-Converts text into vectors.
-
-Chroma
-
-Stores vectors and performs vector similarity search.
-
-Gemini LLM
-
-Generates the final answer.
-
-FastAPI
-
-Exposes the backend REST API.
-
-Next.js
-
-Provides the web interface.
-
-25. Current Retrieval Configuration
-
+RAG Configuration
+Current configuration:
 LLM:
 gemini-3.5-flash-lite
 
@@ -541,248 +247,149 @@ Chunk Size:
 Chunk Overlap:
 30
 
-26. Retrieval Evaluation
+Multi-Document Architecture
+Each uploaded PDF receives a unique document_id.
+Document chunks contain metadata including:
+document_id
+source
+page
 
-The project includes evaluation questions covering RAG, Generative AI, backend technologies, and cloud/deployment technologies.
-
-The current test set achieved 100% topic coverage. This result applies only to the current questions and source document and is not a general RAG benchmark.
-
-27. Latency Measurement
-
-The RAG pipeline measures retrieval time, context construction time, LLM generation time, and total response time.
-
-[RAG]
-retrieval=0.762s
-context=0.001s
-llm=1.442s
-total=2.204s
-
-28. Troubleshooting
-
-Backend cannot connect
-
-Make sure FastAPI is running:
-
-python -m uvicorn app.main:app --reload
-
-Then check:
-
-http://127.0.0.1:8000/health
-
-Frontend says Unable to connect to backend
-
-Make sure both applications are running:
-
-Backend: http://127.0.0.1:8000
-
-Frontend: http://localhost:3000
-
-Also check the browser developer console for errors.
-
-Gemini API error
-
-Check the .env values and restart the backend after changing them.
-
-Chroma problems
-
-Remove-Item chroma_db -Recurse -Force
-python -m app.retrieval.vector_store
-
-Node/npm not recognized
-
-node --version
-npm --version
-
-If Node.js is installed but PowerShell cannot find it, restart PowerShell so the updated PATH is loaded.
-
-29. .gitignore
-
-# Python
-venv/
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Environment variables
-.env
-.env.*
-
-# Chroma
-chroma_db/
-
-# Next.js
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-30. Git Workflow
-
-git status
-git add .
-git commit -m "complete RAG chatbot V1"
-git push origin main
-
-31. Current Project Status
-
-PDF document loading
-
-Document chunking
-
-Gemini embeddings
-
-Chroma vector database
-
+This allows the application to:
+- Upload multiple PDFs
+- Store documents in the same Chroma collection
+- Identify chunks belonging to each document
+- Delete individual documents
+- Clear all documents
+- Return document and page sources with answers
+Document Lifecycle
+Upload PDF
+    ↓
+Generate document_id
+    ↓
+Save PDF
+    ↓
+Load PDF
+    ↓
+Split into chunks
+    ↓
+Generate embeddings
+    ↓
+Store in Chroma
+    ↓
+User asks question
+    ↓
 Similarity search
+    ↓
+Retrieve top 3 chunks
+    ↓
+Build context
+    ↓
+Gemini generates answer
+    ↓
+Return answer + sources
 
-Top-K retrieval
+Frontend
+The frontend contains two main sections:
+Chat
+- Ask questions about uploaded documents
+- Display conversation history
+- Display retrieved sources
+- Handle loading states
+- Handle backend errors
+Documents
+- Upload PDF files
+- View uploaded documents
+- Delete individual documents
+- Clear all documents
+Runtime Data
+The following directories contain runtime data and should not be committed:
+chroma_db/
+data/uploads/
 
-Context construction
+The .env file is also ignored by Git.
+Testing
+Backend Import Test
+python -c "from app.main import app; print('Backend imports successfully')"
 
-Gemini LLM generation
+Expected:
+Initializing RAG pipeline...
+RAG pipeline initialized.
+Backend imports successfully
 
-Grounded responses
+Health Test
+With the backend running:
+Invoke-RestMethod http://127.0.0.1:8000/health
 
-Greeting handling
+Expected:
+{
+  "status": "ok"
+}
 
-Out-of-document handling
+Example Questions
+After uploading a document, try questions based on the uploaded pdf.
 
-FastAPI backend
+The chatbot should answer using information retrieved from the uploaded documents.
+Project Flow
+                    ┌─────────────────┐
+                    │   Next.js UI    │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │     FastAPI     │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+              ▼                             ▼
+      ┌───────────────┐             ┌───────────────┐
+      │ PDF Ingestion │             │ RAG Pipeline  │
+      └───────┬───────┘             └───────┬───────┘
+              │                             │
+              ▼                             ▼
+      ┌───────────────┐             ┌───────────────┐
+      │ Text Chunking │             │    Chroma     │
+      └───────┬───────┘             │ Vector Store  │
+              │                     └───────┬───────┘
+              ▼                             │
+      ┌───────────────┐                     │
+      │    Gemini     │                     │
+      │   Embeddings  │                     │
+      └───────────────┘                     │
+                                            ▼
+                                    ┌───────────────┐
+                                    │  Gemini LLM   │
+                                    └───────────────┘
 
-Pydantic validation
+Interview Explanation
+I built a full-stack RAG chatbot using Python, LangChain, Google Gemini, Chroma, FastAPI, and Next.js.
+The system allows users to upload multiple PDF documents. Each document is loaded using PyPDFLoader and split into smaller chunks using RecursiveCharacterTextSplitter. Gemini embeddings convert the chunks into vectors, which are stored in Chroma.
+When a user asks a question, the question is embedded and a similarity search retrieves the top relevant chunks from Chroma. These chunks are provided as context to Gemini, which generates a grounded response.
+Each document receives a unique document ID, allowing individual documents to be listed, deleted, or cleared. The API also returns source and page information for retrieved content.
+FastAPI exposes the backend REST APIs, while Next.js provides the web-based chat and document management interface.
 
-CORS
-
-Next.js frontend
-
-React chat UI
-
-TypeScript
-
-Tailwind CSS
-
-Chat history
-
-Loading state
-
-Error handling
-
-Source display
-
-Retrieval evaluation
-
-Latency measurement
-
-Git/GitHub
-
-32. Current Limitations
-
-Single configured PDF document
-
-Local Chroma database
-
-No authentication
-
-No persistent conversation storage
-
-No document upload UI
-
-No streaming responses
-
-No multi-user architecture
-
-No production vector database
-
-No cloud deployment
-
-Similarity search only
-
-33. Future Improvements
-
-Multi-document support
-        |
-        v
-Document upload
-        |
-        v
-Metadata filtering
-        |
-        v
-Hybrid search
-        |
-        v
-Reranking
-        |
-        v
-Streaming responses
-        |
-        v
-Authentication
-        |
-        v
-Persistent conversations
-        |
-        v
-Production vector database
-        |
-        v
-Cloud deployment
-        |
-        v
-Monitoring and observability
-
-34. Quick Start
-
-For an already cloned repository:
-
-# Terminal 1 - Backend
-cd rag-chatbot
-.\venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --reload
-
-# Terminal 2 - Frontend
-cd rag-chatbot\frontend
-npm run dev
-
-Open:
-
-http://localhost:3000
-
-35. First-Time Setup - Complete Command List
-
-git clone https://github.com/vignesh-a-nt07/rag-chatbot.git
-cd rag-chatbot
-
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
-
-# Create .env with your Gemini API key
-
-python -m app.retrieval.vector_store
-
-# Terminal 1
-python -m uvicorn app.main:app --reload
-
-# Terminal 2
-cd frontend
-npm install
-npm run dev
-
-36. Interview Explanation
-
-I built a full-stack RAG chatbot using Python, LangChain, Google Gemini, Chroma, FastAPI, and Next.js. The system loads a PDF using PyPDFLoader, splits it into chunks using RecursiveCharacterTextSplitter, generates embeddings using Gemini's embedding model, and stores those embeddings in Chroma. When a user asks a question, the question is converted into an embedding and Chroma performs similarity search to retrieve the top relevant chunks. Those chunks are passed as context to Gemini, which generates a grounded answer. FastAPI exposes the RAG pipeline through REST APIs, while the Next.js frontend provides the chat interface and displays the retrieved document sources.
-
-37. Repository
-
-GitHub repository:
-
-https://github.com/vignesh-a-nt07/rag-chatbot
+Current Status
+The following functionality is implemented:
+- [x] PDF upload
+- [x] Multiple document support
+- [x] PDF text extraction
+- [x] Document chunking
+- [x] Gemini embeddings
+- [x] Chroma vector database
+- [x] Similarity search
+- [x] Top-K retrieval
+- [x] Context construction
+- [x] Gemini LLM generation
+- [x] Grounded responses
+- [x] Source attribution
+- [x] Greeting handling
+- [x] Out-of-document fallback
+- [x] FastAPI backend
+- [x] Pydantic validation
+- [x] CORS
+- [x] Next.js frontend
+- [x] Chat interface
+- [x] Document management
+- [x] Document deletion
+- [x] Clear all documents
+- [x] Git/GitHub repository

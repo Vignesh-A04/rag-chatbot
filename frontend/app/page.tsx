@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Source = {
-  page: number;
+  page: number | null;
   source: string;
+  document_id: string | null;
 };
 
 type Message = {
@@ -18,11 +19,202 @@ type ChatResponse = {
   sources: Source[];
 };
 
+type Document = {
+  document_id: string;
+  filename: string;
+  pages: number;
+  chunks: number;
+};
+
+type View = "chat" | "documents";
+
+const API_URL = "http://127.0.0.1:8000";
+
 export default function Home() {
+  const [view, setView] = useState<View>("chat");
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
   const [error, setError] = useState("");
+
+  // -----------------------------------------
+  // Load documents
+  // -----------------------------------------
+
+  async function loadDocuments() {
+    try {
+      const response = await fetch(`${API_URL}/documents`);
+
+      if (!response.ok) {
+        throw new Error("Failed to load documents");
+      }
+
+      const data: Document[] = await response.json();
+
+      setDocuments(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  // -----------------------------------------
+  // Upload PDF
+  // -----------------------------------------
+
+  async function handleUpload(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Only PDF files are supported.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setUploading(true);
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(`${API_URL}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Upload failed");
+      }
+
+      await loadDocuments();
+
+      // Start a fresh conversation because
+      // the document collection changed.
+      setMessages([]);
+
+      // Return to chatbot after upload.
+      setView("chat");
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload PDF."
+      );
+    } finally {
+      setUploading(false);
+
+      // Allow the same file to be selected again.
+      event.target.value = "";
+    }
+  }
+
+  // -----------------------------------------
+  // Delete one document
+  // -----------------------------------------
+
+  async function handleDelete(documentId: string) {
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/documents/${documentId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Delete failed");
+      }
+
+      await loadDocuments();
+
+      // Clear current conversation because
+      // the document collection changed.
+      setMessages([]);
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete document."
+      );
+    }
+  }
+
+  // -----------------------------------------
+  // Clear all documents
+  // -----------------------------------------
+
+  async function handleClearAll() {
+    if (documents.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete all uploaded documents?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError("");
+    setClearing(true);
+
+    try {
+      const response = await fetch(`${API_URL}/documents`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Clear failed");
+      }
+
+      setDocuments([]);
+      setMessages([]);
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to clear documents."
+      );
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  // -----------------------------------------
+  // Chat
+  // -----------------------------------------
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -35,7 +227,6 @@ export default function Home() {
 
     setError("");
 
-    // Add user's message immediately
     setMessages((previous) => [
       ...previous,
       {
@@ -48,7 +239,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/chat", {
+      const response = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -58,11 +249,11 @@ export default function Home() {
         }),
       });
 
+      const data: ChatResponse = await response.json();
+
       if (!response.ok) {
         throw new Error("Backend request failed");
       }
-
-      const data: ChatResponse = await response.json();
 
       setMessages((previous) => [
         ...previous,
@@ -83,31 +274,27 @@ export default function Home() {
     }
   }
 
-  return (
-    <main className="min-h-screen bg-gray-100">
-      <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-4 py-8">
-        {/* Header */}
-        <header className="mb-6 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            RAG Chatbot
-          </h1>
+  // -----------------------------------------
+  // Chat View
+  // -----------------------------------------
 
-          <p className="mt-2 text-gray-600">
-            Ask questions about the provided document.
-          </p>
-        </header>
+  function renderChat() {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* -------------------------------- */}
+        {/* Chat messages */}
+        {/* -------------------------------- */}
 
-        {/* Chat area */}
-        <div className="flex-1 rounded-xl bg-white p-5 shadow-sm">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-white p-5 shadow-sm">
           {messages.length === 0 ? (
-            <div className="flex h-full min-h-[400px] items-center justify-center">
+            <div className="flex h-full items-center justify-center">
               <div className="text-center">
                 <h2 className="text-xl font-semibold text-gray-800">
                   Start a conversation
                 </h2>
 
                 <p className="mt-2 text-gray-500">
-                  Ask something about the document.
+                  Ask a question about your uploaded documents.
                 </p>
               </div>
             </div>
@@ -129,15 +316,20 @@ export default function Home() {
                         : "max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 px-5 py-4 text-gray-900"
                     }
                   >
+                    {/* Message role */}
+
                     <div className="mb-1 text-xs font-semibold uppercase tracking-wide opacity-60">
                       {message.role === "user" ? "You" : "AI"}
                     </div>
+
+                    {/* Message content */}
 
                     <div className="whitespace-pre-wrap leading-7">
                       {message.content}
                     </div>
 
                     {/* Sources */}
+
                     {message.role === "assistant" &&
                       message.sources &&
                       message.sources.length > 0 && (
@@ -147,25 +339,29 @@ export default function Home() {
                           </p>
 
                           <div className="space-y-2">
-                            {message.sources.map((source, sourceIndex) => (
-                              <div
-                                key={`${source.source}-${source.page}-${sourceIndex}`}
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600"
-                              >
-                                <span className="font-medium">
-                                  📄 Page {source.page + 1}
-                                </span>
+                            {message.sources.map(
+                              (source, sourceIndex) => (
+                                <div
+                                  key={`${source.document_id}-${source.page}-${sourceIndex}`}
+                                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600"
+                                >
+                                  <span className="font-medium">
+                                    📄 Page{" "}
+                                    {source.page !== null
+                                      ? source.page + 1
+                                      : "?"}
+                                  </span>
 
-                                <span className="mx-2">•</span>
+                                  <span className="mx-2">
+                                    •
+                                  </span>
 
-                                <span>
-                                  {source.source.replace(
-                                    "Vignesh_Arumugam_AI_Engineer_CV 4.pdf",
-                                    "Resume"
-                                  )}
-                                </span>
-                              </div>
-                            ))}
+                                  <span>
+                                    {source.source}
+                                  </span>
+                                </div>
+                              )
+                            )}
                           </div>
                         </div>
                       )}
@@ -174,13 +370,16 @@ export default function Home() {
               ))}
 
               {/* Loading */}
+
               {loading && (
                 <div className="flex justify-start">
                   <div className="rounded-2xl rounded-bl-md bg-gray-100 px-5 py-4 text-gray-600">
                     <div className="flex items-center gap-2">
                       <span>AI is thinking</span>
 
-                      <span className="animate-pulse">...</span>
+                      <span className="animate-pulse">
+                        ...
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -189,22 +388,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {/* -------------------------------- */}
+        {/* Chat input */}
+        {/* -------------------------------- */}
 
-        {/* Input */}
         <form
           onSubmit={handleSubmit}
-          className="mt-4 flex gap-3 rounded-xl bg-white p-3 shadow-sm"
+          className="mt-3 flex flex-shrink-0 gap-3 rounded-xl bg-white p-3 shadow-sm"
         >
           <input
             type="text"
             value={question}
-            onChange={(event) => setQuestion(event.target.value)}
+            onChange={(event) =>
+              setQuestion(event.target.value)
+            }
             placeholder="Ask a question..."
             disabled={loading}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 outline-none focus:border-gray-500 disabled:bg-gray-100"
@@ -218,6 +415,198 @@ export default function Home() {
             {loading ? "..." : "Send"}
           </button>
         </form>
+      </div>
+    );
+  }
+
+  // -----------------------------------------
+  // Documents View
+  // -----------------------------------------
+
+  function renderDocuments() {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-6 shadow-sm">
+        {/* Header */}
+
+        <div className="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Documents
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Upload and manage documents used by the chatbot.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            {/* Upload */}
+
+            <label
+              className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white transition ${
+                uploading
+                  ? "cursor-not-allowed bg-gray-400"
+                  : "bg-black hover:bg-gray-800"
+              }`}
+            >
+              {uploading ? "Uploading..." : "Upload PDF"}
+
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+
+            {/* Clear All */}
+
+            {documents.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                disabled={clearing}
+                className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {clearing ? "Clearing..." : "Clear All"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Document list */}
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {documents.length === 0 ? (
+            <div className="flex h-full min-h-[300px] items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl">📄</div>
+
+                <h3 className="mt-4 font-semibold text-gray-800">
+                  No documents uploaded
+                </h3>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  Upload a PDF to start asking questions.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 pt-5">
+              {documents.map((document) => (
+                <div
+                  key={document.document_id}
+                  className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-gray-800">
+                      📄 {document.filename}
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      {document.pages}{" "}
+                      {document.pages === 1
+                        ? "page"
+                        : "pages"}{" "}
+                      • {document.chunks} chunks
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleDelete(
+                        document.document_id
+                      )
+                    }
+                    className="self-start rounded-md px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 sm:self-auto"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // -----------------------------------------
+  // Main Layout
+  // -----------------------------------------
+
+  return (
+    <main className="h-screen overflow-hidden bg-gray-100">
+      <div className="mx-auto flex h-full max-w-5xl flex-col px-4 py-3">
+        {/* -------------------------------- */}
+        {/* Navigation */}
+        {/* -------------------------------- */}
+
+        <header className="mb-3 flex flex-shrink-0 items-center justify-between rounded-xl bg-white px-5 py-3 shadow-sm">
+          {/* Logo / title */}
+
+          <button
+            type="button"
+            onClick={() => setView("chat")}
+            className="text-left"
+          >
+            <h1 className="text-xl font-bold text-gray-900">
+              RAG Chatbot
+            </h1>
+
+            <p className="text-xs text-gray-500">
+              Document-based AI assistant
+            </p>
+          </button>
+
+          {/* Navigation */}
+
+          <nav className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setView("chat")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                view === "chat"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              Chat
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setView("documents")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                view === "documents"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              Documents
+            </button>
+          </nav>
+        </header>
+
+        {/* -------------------------------- */}
+        {/* Error */}
+        {/* -------------------------------- */}
+
+        {error && (
+          <div className="mb-3 flex-shrink-0 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* -------------------------------- */}
+        {/* Main content */}
+        {/* -------------------------------- */}
+
+        {view === "chat"
+          ? renderChat()
+          : renderDocuments()}
       </div>
     </main>
   );
